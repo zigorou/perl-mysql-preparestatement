@@ -23,8 +23,8 @@ sub prepare {
 
     $opts ||= {};
     %$opts = (
-        name => random_regex('\w[4,10]'),
-        %$opts,
+        name => random_regex('\w{4,10}'),
+        ( %$opts ),
         statement => $statement,
         _queries => [],
         _binds => [],
@@ -43,9 +43,9 @@ sub bind_param {
     }
 
     my $sql_type = (defined $opts) ? 
-        ( (ref $opts eq "HASH") ? $opts->{TYPE} : $opts ) : SQL_ALL_TYPES;
+        ( (ref $opts eq "HASH") ? $opts->{TYPE} : $opts ) : SQL_VARCHAR;
 
-    $self->_binds->[$num - 1] = {
+    $self->{_binds}[$num - 1] = {
         value => $bind_value,
         type  => $sql_type,
     };
@@ -60,7 +60,7 @@ sub execute {
     for my $bind (@binds) {
         my ($bind_value, $opts) = (defined $bind && ref $bind eq 'HASH') ? 
             ( $bind->{value}, $bind->{type} ) : ( $bind, undef );
-        $self->bind_param($i, $bind_value, $opts);
+        $self->bind_param($i++, $bind_value, $opts);
     }
 
     $self->_push_query( $self->_make_set_query );
@@ -103,6 +103,10 @@ sub _make_prepare_query {
 sub _make_set_query {
     my $self = shift;
 
+    my @binds = @{$self->_binds};
+
+    return if (@binds == 0);
+
     my $query = 'SET ';
     my $i = 1;
 
@@ -112,7 +116,7 @@ sub _make_set_query {
             $i++, 
             $self->_quote($_->{value}, $_->{type}) 
         )
-    } @{$self->_binds};
+    } @binds;
 
     return $query;
 }
@@ -140,6 +144,7 @@ sub _make_deallocate_prepare_query {
 
 sub _push_query {
     my ($self, $query) = @_;
+    return unless defined $query;
     push(@{$self->_queries}, $query);
 }
 
