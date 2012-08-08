@@ -34,7 +34,7 @@ subtest "execute with bind parameters" => sub {
     ]);
 };
 
-subtest "complex pattern" => sub {
+subtest "reusing prepared statement" => sub {
     my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1' });
     $s->execute({ value => 1, type => SQL_INTEGER }, 'foo');
     $s->execute({ value => 2, type => SQL_INTEGER }, 'bar');

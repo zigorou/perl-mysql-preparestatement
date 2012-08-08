@@ -77,15 +77,6 @@ sub finish {
     1;
 }
 
-sub reset {
-    my $self = shift;
-
-    $self->{_queries} = [];
-    $self->{_binds} = [];
-
-    1;
-}
-
 sub as_query {
     my $self = shift;
     return wantarray ? @{$self->{_queries}} : [ @{$self->{_queries}} ];
@@ -164,7 +155,7 @@ __END__
 
 =head1 NAME
 
-MySQL::PreparedStatement -
+MySQL::PreparedStatement - Generate server-side prepared statements for MySQL
 
 =head1 SYNOPSIS
 
@@ -188,13 +179,129 @@ MySQL::PreparedStatement -
 
 =head1 DESCRIPTION
 
-MySQL::PreparedStatement is
+MySQL::PreparedStatement is generating server-side prepared statement library.
+This module can be used by L<DBI>'s statement handle manipulation.
+
+=head1 METHODS
+
+=head2 prepare($statement, \%opts)
+
+Create new MySQL::PreparedStatement object in order to given statement string.
+
+=head3 arguments
+
+=head4 $statement : Str
+
+=head4 \%opts : Hash
+
+=head3 returns
+
+=head2 bind_param($num, $bind_value, \%opts or $sql_type)
+
+Apply bind parameter.
+
+=head3 arguments
+
+=head4 $num : Int
+
+=head4 $bind_value : Str or Num
+
+=head4 \%opts : HashRef
+
+=head4 $sql_type : Int
+
+=head3 returns
+
+Always return 1 value.
+
+=head2 execute([$bind_value or \%bind, ...])
+
+Generate SET and EXECUTE statements in order to given bind parameters.
+
+=head3 arguments
+
+=head4 $bind_value : Scalar 
+
+=head4 \%bind : HashRef
+
+=head3 returns
+
+Always return 1 value.
+
+=head2 finish()
+
+Generate DEALLOCATE PREPARE statement.
+
+=head3 arguments
+
+None.
+
+=head3 returns
+
+=head2 as_query()
+
+Retrieve generated queries as array or array reference.
+
+=head3 arguments
+
+None.
+
+=head3 returns
+
+=head1 COOKBOOKS
+
+=head2 Using execute() method with bind parameters
+
+  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1' });
+  $s->execute({ value => 1, type => SQL_INTEGER }, 'foo');
+  $s->finish;
+  local $, = ";\n";
+  print ($s->as_query);
+
+This code will generate following queries.
+
+  PREPARE sth1 FROM 'INSERT INTO test(id, name) VALUES(?, ?)';
+  SET @b1 = 1, @b2 = 'foo';
+  EXECUTE sth1 USING @b1, @b2;
+  DEALLOCATE PREPARE sth1;
+
+=head2 Reusing prepared statement
+
+  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1' });
+  $s->execute({ value => 1, type => SQL_INTEGER }, 'foo');
+  $s->execute({ value => 2, type => SQL_INTEGER }, 'bar');
+  $s->finish;
+  local $, = ";\n";
+  print ($s->as_query);
+
+This code will generate following queries.
+
+  PREPARE sth1 FROM 'INSERT INTO test(id, name) VALUES(?, ?)';
+  SET @b1 = 1, @b2 = 'foo';
+  EXECUTE sth1 USING @b1, @b2;
+  SET @b1 = 2, @b2 = 'bar';
+  EXECUTE sth1 USING @b1, @b2;
+  DEALLOCATE PREPARE sth1;
 
 =head1 AUTHOR
 
 Toru Yamaguchi E<lt>zigorou@cpan.orgE<gt>
 
 =head1 SEE ALSO
+
+=over
+
+=item L<Carp>
+
+=item L<Class::Accessor::Lite>
+
+=item L<DBI>
+
+=item L<List::MoreUtils>
+
+=item L<String::Random>
+
+=back
 
 =head1 LICENSE
 
