@@ -168,7 +168,23 @@ MySQL::PreparedStatement -
 
 =head1 SYNOPSIS
 
+  use DBI qw(:sql_types);
   use MySQL::PreparedStatement;
+
+  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1' });
+
+  $s->bind_param(1, 1, SQL_INTEGER);
+  $s->bind_param(2, 'foo', SQL_VARCHAR);
+  $s->execute;
+  $s->finish;
+
+  local $, = ";\n";
+  print ( $s->as_query );
+
+  # PREPARE sth1 FROM 'INSERT INTO test(id, name) VALUES(?, ?)';
+  # SET @b1 = 1, @b2 = 'foo';
+  # EXECUTE sth1 USING @b1, @b2;
+  # DEALLOCATE PREPARE sth1
 
 =head1 DESCRIPTION
 
