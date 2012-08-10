@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use Class::Accessor::Lite (
     new => 0,
-    rw => [qw/name statement _queries _binds/],
+    rw => [qw/name statement server_prepare _queries _binds/],
 );
 use DBI qw(:sql_types);
 use List::MoreUtils qw(first_index);
@@ -24,6 +24,7 @@ sub prepare {
     $opts ||= {};
     %$opts = (
         name => random_regex('\w{4,10}'),
+        server_prepare => 0,
         ( %$opts ),
         statement => $statement,
         _queries => [],
@@ -63,7 +64,9 @@ sub execute {
         $self->bind_param($i++, $bind_value, $opts);
     }
 
-    $self->_push_query( $self->_make_set_query );
+    if ($self->{server_prepare}) {
+        $self->_push_query( $self->_make_set_query );
+    }
     $self->_push_query( $self->_make_execute_query );
 
     $self->{_binds} = [];
