@@ -6,6 +6,7 @@ requires 'Carp';
 requires 'Class::Accessor::Lite';
 requires 'DBI';
 requires 'List::MoreUtils';
+requires 'SQL::Tokenizer';
 requires 'String::Random';
 
 tests 't/*.t';

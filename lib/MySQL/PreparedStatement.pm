@@ -191,7 +191,7 @@ __END__
 
 =head1 NAME
 
-MySQL::PreparedStatement - Generate server-side prepared statements for MySQL
+MySQL::PreparedStatement - Generate prepared statements for MySQL
 
 =head1 SYNOPSIS
 
@@ -234,7 +234,7 @@ Using server-side prepared statement.
 
 =head1 DESCRIPTION
 
-MySQL::PreparedStatement is generating server-side prepared statement library.
+MySQL::PreparedStatement is the library generating client/server side prepared statement.
 This module can be used by L<DBI>'s statement handle manipulation.
 
 =head1 METHODS
@@ -249,7 +249,25 @@ Create new MySQL::PreparedStatement object in order to given statement string.
 
 =head4 \%opts : Hash
 
+Field details are following:
+
+=over
+
+=item name : Str
+
+This field will be only used with server_prepare value as true.
+This value is used for 'PREPARE', 'EXECUTE', 'DEALLOCATE PREPARE' statement name.
+
+=item server_prepare : Str
+
+When this value is true, this library runs server-side prepare mode.
+Default value is false.
+
+=back
+
 =head3 returns
+
+Return L<MySQL::PreparedStatement> instance value.
 
 =head2 bind_param($num, $bind_value, \%opts or $sql_type)
 
@@ -259,11 +277,26 @@ Apply bind parameter.
 
 =head4 $num : Int
 
-=head4 $bind_value : Str or Num
+Placeholder number.
+
+=head4 $bind_value : Scalar or ScalarRef
+
+Bind parameter.
+If you specify ScalarRef value, this library will not quoting for the Scalar value.
 
 =head4 \%opts : HashRef
 
+=over
+
+=item sql_type : Int
+
+L<DBI>'s sql_types value.
+
+=back
+
 =head4 $sql_type : Int
+
+L<DBI>'s sql_types value.
 
 =head3 returns
 
@@ -271,13 +304,32 @@ Always return 1 value.
 
 =head2 execute([$bind_value or \%bind, ...])
 
-Generate SET and EXECUTE statements in order to given bind parameters.
+When server_prepare is true, generating SET and EXECUTE statements in order to given bind parameters.
+Or not, generating statement replaced each placeholder by bind parameter.
 
 =head3 arguments
 
-=head4 $bind_value : Scalar 
+=head4 $bind_value : Scalar or ScalarRef
+
+Bind parameter.
+If you specify ScalarRef value, this library will not quoting for the Scalar value.
 
 =head4 \%bind : HashRef
+
+Bind parameter and type.
+
+=over
+
+=item value
+
+Bind parameter.
+If you specify ScalarRef value, this library will not quoting for the Scalar value.
+
+=item type
+
+L<DBI>'s sql_types value.
+
+=back
 
 =head3 returns
 
@@ -285,7 +337,7 @@ Always return 1 value.
 
 =head2 finish()
 
-Generate DEALLOCATE PREPARE statement.
+When server_prepare is true, generating DEALLOCATE PREPARE statement.
 
 =head3 arguments
 
