@@ -10,6 +10,7 @@ use Class::Accessor::Lite (
 );
 use DBI qw(:sql_types);
 use List::MoreUtils qw(first_index);
+use SQL::Tokenizer qw(tokenize_sql);
 use String::Random qw(random_regex);
 
 our $VERSION = '0.01';
@@ -32,7 +33,10 @@ sub prepare {
     );
 
     my $self = bless $opts => $class;
-    $self->_push_query( $self->_make_prepare_query );
+
+    if ($self->{server_prepare}) {
+        $self->_push_query( $self->_make_prepare_query );
+    }
     $self;
 }
 
@@ -66,8 +70,11 @@ sub execute {
 
     if ($self->{server_prepare}) {
         $self->_push_query( $self->_make_set_query );
+        $self->_push_query( $self->_make_execute_query );
     }
-    $self->_push_query( $self->_make_execute_query );
+    else {
+        $self->_push_query( $self->_make_binded_query );
+    }
 
     $self->{_binds} = [];
 
@@ -76,13 +83,35 @@ sub execute {
 
 sub finish {
     my $self = shift;
-    $self->_push_query( $self->_make_deallocate_prepare_query );
+    if ($self->{server_prepare}) {
+        $self->_push_query( $self->_make_deallocate_prepare_query );
+    }
     1;
 }
 
 sub as_query {
     my $self = shift;
     return wantarray ? @{$self->{_queries}} : [ @{$self->{_queries}} ];
+}
+
+sub _make_binded_query {
+    my $self = shift;
+    my @tokens = tokenize_sql($self->{statement});
+    my @binds = @{$self->_binds};
+
+    my $query = '';
+
+    for my $token (@tokens) {
+        if ($token eq '?') {
+            my $bind = shift @binds;
+            $query .= $self->_quote($bind->{value}, $bind->{type});
+        }
+        else {
+            $query .= $token;
+        }
+    }
+
+    return $query;
 }
 
 sub _make_prepare_query {
@@ -145,6 +174,10 @@ sub _push_query {
 sub _quote {
     my ($self, $bind_value, $sql_type) = @_;
 
+    if (ref $bind_value eq 'SCALAR') {
+        return $$bind_value;
+    }
+
     if ( defined $sql_type && ( first_index { $_ == $sql_type } @NON_QUOTE_TYPES ) > -1) {
         return $bind_value;
     }
@@ -162,10 +195,29 @@ MySQL::PreparedStatement - Generate server-side prepared statements for MySQL
 
 =head1 SYNOPSIS
 
+Using client-side prepared statement.
+
   use DBI qw(:sql_types);
   use MySQL::PreparedStatement;
 
-  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1' });
+  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1', server_prepare => 0 });
+
+  $s->bind_param(1, 1, SQL_INTEGER);
+  $s->bind_param(2, 'foo', SQL_VARCHAR);
+  $s->execute;
+  $s->finish;
+
+  local $, = ";\n";
+  print ( $s->as_query );
+
+  # INSERT INTO test(id, name) VALUES(1, 'foo');
+
+Using server-side prepared statement.
+
+  use DBI qw(:sql_types);
+  use MySQL::PreparedStatement;
+
+  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1', server_prepare => 1 });
 
   $s->bind_param(1, 1, SQL_INTEGER);
   $s->bind_param(2, 'foo', SQL_VARCHAR);
@@ -255,7 +307,7 @@ None.
 
 =head2 Using execute() method with bind parameters
 
-  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1' });
+  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1', server_prepare => 1 });
   $s->execute({ value => 1, type => SQL_INTEGER }, 'foo');
   $s->finish;
   local $, = ";\n";
@@ -270,7 +322,7 @@ This code will generate following queries.
 
 =head2 Reusing prepared statement
 
-  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1' });
+  my $s = MySQL::PreparedStatement->prepare('INSERT INTO test(id, name) VALUES(?, ?)', { name => 'sth1', server_prepare => 1 });
   $s->execute({ value => 1, type => SQL_INTEGER }, 'foo');
   $s->execute({ value => 2, type => SQL_INTEGER }, 'bar');
   $s->finish;

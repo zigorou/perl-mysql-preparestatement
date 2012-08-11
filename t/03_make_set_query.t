@@ -7,7 +7,7 @@ use MySQL::PreparedStatement;
 
 sub make_set_query {
     my (@binds) = @_;
-    my $s = MySQL::PreparedStatement->prepare( 'SELECT 1 FROM dual', { name => 'aaa' } );
+    my $s = MySQL::PreparedStatement->prepare( 'SELECT 1 FROM dual', { name => 'sth', server_prepare => 1 } );
     $s->_binds(\@binds);
     $s->_make_set_query;
 }

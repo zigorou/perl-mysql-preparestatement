@@ -7,7 +7,7 @@ use MySQL::PreparedStatement;
 
 sub make_prepare_query {
     my ($stmt, $name) = @_;
-    my $s = MySQL::PreparedStatement->prepare( $stmt, { name => $name } );
+    my $s = MySQL::PreparedStatement->prepare( $stmt, { name => $name, server_prepare => 1 } );
     return $s->_make_prepare_query;
 }
 

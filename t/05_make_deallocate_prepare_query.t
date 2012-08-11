@@ -7,10 +7,10 @@ use MySQL::PreparedStatement;
 
 sub make_deallocate_prepare_query {
     my (@binds) = @_;
-    my $s = MySQL::PreparedStatement->prepare( 'SELECT 1 FROM dual', { name => 'aaa' } );
+    my $s = MySQL::PreparedStatement->prepare( 'SELECT 1 FROM dual', { name => 'sth' } );
     $s->_make_deallocate_prepare_query;
 }
 
-is(make_deallocate_prepare_query(), q|DEALLOCATE PREPARE aaa|, 'query');
+is(make_deallocate_prepare_query(), q|DEALLOCATE PREPARE sth|, 'query');
 
 done_testing;
